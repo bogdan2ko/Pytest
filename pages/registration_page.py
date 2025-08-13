@@ -1,42 +1,60 @@
 from playwright.sync_api import Page
-from faker import Faker
 
-fake=Faker()
-
-
-class RegistrationPage():
+class RegistrationPage:
     def __init__(self, page: Page):
         self.page = page
-        self.name_input = "input[name='name']"
-        self.email_input = "input[name='email']"
-        self.password_input = "input[name='password']"
-        self.register_button = "#register-button"
-        self.error_message = "text=All fields are required"
-        self.duplicate_email_error = "text=Email already exists"
 
     def open(self):
-        self.page.goto("http://example.com/register")
-    
+        self.page.goto("https://practice.expandtesting.com/register")
 
-    def fill_form(self, name:str, email:str, password:str):
-        self.page.fill(self.name_input, name)
-        self.page.fill(self.email_input, email)
-        self.page.fill(self.password_input, password)
+    def fill_form(self, username: str, password: str, confirm_password: str):
+        self.page.get_by_role("textbox", name="Username").fill(username)
+        self.page.get_by_role("textbox", name="Password", exact=True).fill(password)
+        self.page.get_by_role("textbox", name="Confirm Password").fill(confirm_password)
 
     def submit(self):
-        self.page.click(self.register_button)
+        self.page.get_by_role("button", name="Register").click()
 
     def is_registration_successful(self):
-        return "/welcome" in self.page.url and \
-            self.page.locator("text=Registration Successful").is_visible()
-    
-    def has_email_validation_error(self):
-        return self.page.locator("text=Invalid email format").is_visible()
-    
+        try:
+            return "/login" in self.page.url and \
+                self.page.wait_for_selector("text=Successfully registered, you can log in now.").is_visible()
+        except:
+            return False
+        
     def has_empty_fields_error(self):
-        return self.page.locator(self.error_message).is_visible()
-    
-    def has_duplicate_email_error(self):
-        return self.page.locator(self.duplicate_email_error).is_visible()
-    
+        # Проверяем наличие ошибки "All fields are required"
+        try:
+            self.page.wait_for_selector("text=All fields are required", timeout=3000)
+            return True
+        except:
+            return False
 
+    def has_duplicate_email_error(self):
+        try:
+            self.page.wait_for_selector("text=Email already exists", timeout=3000)
+            return True
+        except:
+            return False
+
+    def has_short_username_error(self):
+        try:
+            self.page.wait_for_selector("text=Username must be at least 3 characters long.", timeout=3000)
+            return True
+        except:
+            return False
+        
+    def has_uncorrect_passwords_error(self):
+        try:
+            self.page.wait_for_selector("text=Passwords do not match.", timeout=3000)
+            return True 
+        except:
+            return False
+        
+
+    def has_invalid_username(self):
+        try:
+            return "/register" in self.page.url and \
+                self.page.wait_for_selector("text=Invalid username. Usernames can only contain lowercase letters, numbers, and single hyphens, must be between 3 and 39 characters, and cannot start or end with a hyphen.").is_visible()
+        except:
+            return False
